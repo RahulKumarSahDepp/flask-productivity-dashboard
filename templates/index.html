@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Productivity Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+        .container {
+            flex: 1;
+        }
+        .nav-link:hover {
+        color: #0d6efd !important;
+        transform: translateY(-1px);
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            font-weight: 600;
+            color: #343a40;
+        }
+        th {
+            background-color: #198754;
+            color: white;
+        }
+        td, th {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .chart-container {
+            position: relative;
+            height: 320px;
+            width: 100%;
+        }
+        .checkbox-circle {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #198754;
+            border-radius: 50%;
+            appearance: none;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+        }
+        .checkbox-circle:checked {
+            background-color: #198754;
+            border-color: #198754;
+        }
+        .checkbox-circle:checked::after {
+            content: "✓";
+            color: white;
+            font-size: 14px;
+            position: absolute;
+            top: 1px;
+            left: 4px;
+        }
+        .summary-box {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .summary-item {
+            background: #fff;
+            border-left: 5px solid #198754;
+            padding: 15px 25px;
+            border-radius: 8px;
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+        footer {
+            background-color: #198754;
+            color: white;
+            text-align: center;
+            padding: 15px 10px;
+            margin-top: auto;
+        }
+        footer a {
+            color: white;
+            margin: 0 10px;
+            font-size: 1.3rem;
+            transition: 0.3s;
+        }
+        footer a:hover {
+            color: #d4edda;
+        }
+    </style>
+</head>
+<body>
+    <!-- Flash message -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!--  -->
+    <div class="container mt-5">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>📊 Productivity Dashboard</h1>
+            <li class="nav-item ms-2">
+                <a class="nav-link d-flex align-items-center" href="{{ url_for('profile') }}">
+                    <img src="{{ url_for('static', filename='uploads/profile.png') }}" 
+                        alt="Profile" 
+                        class="rounded-circle me-2" 
+                        style="width: 28px; height: 28px; object-fit: cover;">
+                    <span>{{ current_user.username }}</span>
+                </a>
+            </li>
+            <a href="{{ url_for('add_task') }}" class="btn btn-success">+ Add Task</a>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-box">
+            <div class="summary-item">
+                <h6>Total Duration</h6>
+                <h4>{{ total_duration }} hrs</h4>
+            </div>
+            <div class="summary-item">
+                <h6>Average Duration</h6>
+                <h4>{{ avg_duration }} hrs</h4>
+            </div>
+            <div class="summary-item">
+                <h6>Pending Tasks</h6>
+                <h4>{{ pending_tasks }}</h4>
+            </div>
+        </div>
+        <!-- search - bar -->
+        <div class="container mt-4">
+            <form method="GET" action="{{ url_for('index') }}" class="mb-4 d-flex justify-content-center align-items-center flex-wrap gap-2">
+                    <input type="text" name="search" class="form-control w-25" placeholder="Search tasks..." value="{{ request.args.get('search', '') }}">
+                    
+                    <select name="status" class="form-select w-25">
+                        <option value="">All Status</option>
+                        <option value="Pending" {% if request.args.get('status') == 'Pending' %}selected{% endif %}>Pending</option>
+                        <option value="Completed" {% if request.args.get('status') == 'Completed' %}selected{% endif %}>Completed</option>
+                    </select>
+
+                    <select name="category" class="form-select w-25">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat['category'] }}" {% if request.args.get('category') == cat['category'] %}selected{% endif %}>{{ cat['category'] }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <button type="submit" class="btn btn-primary">Apply</button>
+            </form>
+
+        </div>
+
+        <!-- Tasks Table -->
+        <div class="card p-3 mb-5">
+            <h2 class="mb-3">All Tasks</h2>
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Duration (hrs)</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr id="task-row-{{ task.id }}">
+                        <td>
+                            <input type="checkbox" class="checkbox-circle" {% if task.status == 'Completed' %}checked{% endif %} onclick="toggleStatus({{ task.id }})">
+                        </td>
+                        <td>{{ task.id }}</td>
+                        <td>{{ task.title }}</td>
+                        <td>{{ task.category }}</td>
+                        <td>{{ task.duration }}</td>
+                        <td>{{ task.date }}</td>
+                        <!-- <td>
+                            <span id="status-{{ task.id }}" class="badge {% if task.status == 'Completed' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                {{ task.status }}
+                            </span>
+                        </td> -->
+                        <td>
+                            <div class="mb-1">
+                            <span id="status-{{ task.id }}" class="badge {% if task.status == 'Completed' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                {{ task.status }}
+                            </span>
+                            {% if task.deadline %}
+                                <small class="d-block">Due: {{ task.deadline }}</small>
+                            {% endif %}
+                            </div>
+
+                            <div class="progress" style="height: 10px; width: 140px; margin: 0 auto;">
+                            <div class="progress-bar {% if task.progress == 100 %}bg-success{% else %}bg-info{% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ task.progress }}%;" 
+                                aria-valuenow="{{ task.progress }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100"></div>
+                            </div>
+                            <small class="d-block text-center mt-1">{{ task.progress }}%</small>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('edit_task', id=task.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                            <a href="{{ url_for('delete_task', id=task.id) }}" class="btn btn-sm btn-danger">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Charts -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-6">
+                <div class="card p-3 ">
+                    <h5 class="text-center mb-3">Tasks by Status</h5>
+                    <div class="col-md-6 d-flex justify-content-center">
+                        <div class="chart-container">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3">
+                    <h5 class="text-center mb-3">Tasks by Category</h5>
+                    <div class="chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div>
+            <a href="https://www.linkedin.com/in/way-to-tech/" target="_blank" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
+            <a href="https://github.com/RahulKumarSahDepp" target="_blank" title="GitHub"><i class="bi bi-github"></i></a>
+            <a href="https://leetcode.com/u/RahulKumarSah/" target="_blank" title="LeetCode"><i class="bi bi-code-slash"></i></a>
+            <a href="https://rahulsah02.com.np/" target="_blank" title="Portfolio"><i class="bi bi-globe"></i></a>
+        </div>
+        <small class="d-block mt-2">© 2025 Rahul Kumar Sah | Made with ❤️ in Flask</small>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let statusData = {{ status_data | safe }};
+        const categoryData = {{ category_data | safe }};
+
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statusData.labels,
+                datasets: [{
+                    data: statusData.values,
+                    backgroundColor: ['#198754', '#ffc107']
+                }]
+            },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
+
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'bar',
+            data: {
+                labels: categoryData.labels,
+                datasets: [{
+                    data: categoryData.values,
+                    backgroundColor: '#0d6efd',
+                    borderRadius: 8
+                }]
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+
+        function toggleStatus(taskId) {
+            fetch(`/toggle_status/${taskId}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.getElementById(`status-${taskId}`);
+                        badge.textContent = data.new_status;
+                        badge.className = data.new_status === 'Completed' ? "badge bg-success" : "badge bg-warning text-dark";
+
+                        // Update chart dynamically
+                        statusChart.data.labels = data.status_data.labels;
+                        statusChart.data.datasets[0].data = data.status_data.values;
+                        statusChart.update();
+                    }
+                });
+        }
+    </script>
+</body>
+</html>
