@@ -62,7 +62,7 @@ This full-stack web app demonstrates practical implementation of **CRUD operatio
 ---
 
 ## 🧩 Project Structure
-
+```bash
 productivity_dashboard/
 │
 ├── app.py # Main Flask application
@@ -83,7 +83,7 @@ productivity_dashboard/
 ├── requirements.txt # Dependencies list
 ├── .gitignore
 └── README.md # Project documentation
-
+```
 
 ---
 
