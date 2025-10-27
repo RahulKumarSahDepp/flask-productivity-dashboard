@@ -138,3 +138,21 @@ CREATE TABLE tasks (
 ```bash
 flask run
 ```
+
+
+⭐ If you like this project, don’t forget to star the repo! ⭐
+
+---
+
+## 🧩 **requirements.txt**
+
+```txt
+Flask==3.0.3
+Flask-Login==0.6.3
+Werkzeug==3.0.3
+mysql-connector-python==9.0.0
+Jinja2==3.1.4
+itsdangerous==2.2.0
+click==8.1.7
+MarkupSafe==3.0.2
+```
