@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__)
-app.secret_key = 'RahulSahProductivityDashboard2025SuperDataAnalysisProject03'
+app.secret_key = 'your_key'
 login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
@@ -24,7 +24,7 @@ def get_db_connection():
     conn = mysql.connector.connect(
         host = "localhost",
         user = "root",
-        password = "DepthFirst",
+        password = "password",
         database = "productivity"
     )
     return conn
